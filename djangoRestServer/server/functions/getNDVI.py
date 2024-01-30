@@ -51,17 +51,17 @@ def getNDVI(r: np.array, n: np.array) -> np.array:
     ndvi = (n - r) / (n + r)  # The NDVI formula
     return ndvi
 
-def NDVI():
+def NDVI(zipFilePath):
     name = "NDVI.tiff"
 
-    z = zipfile.ZipFile('./server/functions/dataFromSpace.zip')  # Flexibility with regard to zipfile
+    z = zipfile.ZipFile(zipFilePath)  # Flexibility with regard to zipfile
     for c in z.namelist():
 
         # print(c)
         if c == 'B04_8.tiff':
-            red = rasterio.open('zip+file:./server/functions/dataFromSpace.zip/' + c, "r")
+            red = rasterio.open('zip+file:./' + zipFilePath + '/' + c, "r")
         else:
-            nir = rasterio.open('zip+file:./server/functions/dataFromSpace.zip/' + c, "r")
+            nir = rasterio.open('zip+file:./' + zipFilePath + '/' + c, "r")
 
     # Reading red band.
     red_array = red.read()

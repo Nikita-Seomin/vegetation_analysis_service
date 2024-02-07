@@ -20,7 +20,7 @@ import optparse
 import numpy as np
 import rasterio
 import zipfile
-
+import uuid
 
 class OptionParser(optparse.OptionParser):
     "A class to parse the arguments."
@@ -75,10 +75,13 @@ def NDVI(zipFilePath):
 
     # Updating metadata
     metadata.update({"driver": "GTiff", "dtype": rasterio.float32})
+    path = os.path.join('./data/result/', str(uuid.uuid4()) + ".tiff")
 
     # Writing the NDVI raster with the same properties as the original data
-    with rasterio.open(os.path.join('./server/functions/', name), "w", **metadata) as dst:
+    with rasterio.open(path, "w", **metadata) as dst:
         if ndvi_array.ndim == 2:
             dst.write(ndvi_array, 1)
         else:
             dst.write(ndvi_array)
+
+    return path

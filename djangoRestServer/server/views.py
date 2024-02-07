@@ -2,6 +2,8 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from django.http import HttpResponse, HttpResponseNotFound
+
 from .functions.getNDVI import NDVI
 from .models import InputFile
 from .serializers import InputFileSerializer
@@ -18,9 +20,16 @@ class ZipFileAPIView(APIView):
 
         zipFilePath = InputFileSerializer(post_zip).data['upload'][1:]
         print(zipFilePath)
-        NDVI(zipFilePath)
+        fileLocation = NDVI(zipFilePath)
+
+        with open(fileLocation, 'rb') as f:
+            file_data = f.read()
+
+            # sending response
+        response = HttpResponse(file_data, content_type='image/tiff')
+        response['Content-Disposition'] = 'form-data; filename="foo.tiff"'
 
         respData= {
-        'const': 1,
+        'const': fileLocation,
         }
-        return Response(respData)
+        return response

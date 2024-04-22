@@ -4,9 +4,10 @@ from rest_framework.response import Response
 
 from django.http import HttpResponse, HttpResponseNotFound
 
-from .functions.getNDVI import NDVI
+from .functions.common import getPathToTrueColorFromZip, getPathToRedFromZip
+from .functions.getNDVI import *
 from .models import InputFile
-from .serializers import InputFileSerializer
+from .serializers import InputFileSerializer, InputFileTrueColorSerializer
 
 
 # Create your views here.
@@ -19,17 +20,15 @@ class ZipFileAPIView(APIView):
         )
 
         zipFilePath = InputFileSerializer(post_zip).data['upload'][1:]
-        print(zipFilePath)
-        fileLocation = NDVI(zipFilePath)
+        # fileLocation = NDVI(zipFilePath)
+        trueFilePath = getPathToTrueColorFromZip(zipFilePath)
+        maskFilePath = getTreeMask(trueFilePath)
 
-        with open(fileLocation, 'rb') as f:
+        with open(maskFilePath, 'rb') as f:
             file_data = f.read()
 
             # sending response
         response = HttpResponse(file_data, content_type='image/tiff')
-        response['Content-Disposition'] = 'form-data; filename="foo.tiff"'
+        response['Content-Disposition'] = 'form-data; filename="mask.tiff"'
 
-        respData= {
-        'const': fileLocation,
-        }
         return response

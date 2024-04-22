@@ -14,13 +14,19 @@
 # Created by Alexandros Falagas
 # Last update 13-09-2022
 
-import sys
 import os
 import optparse
 import numpy as np
 import rasterio
 import zipfile
 import uuid
+
+
+import matplotlib.pyplot as plt
+import rasterio as rio
+from rasterio import plot
+import detectree as dtr
+from PIL import Image
 
 class OptionParser(optparse.OptionParser):
     "A class to parse the arguments."
@@ -49,39 +55,77 @@ def getNDVI(r: np.array, n: np.array) -> np.array:
     n = n.astype(rasterio.float32)
     r = r.astype(rasterio.float32)
     ndvi = (n - r) / (n + r)  # The NDVI formula
+
     return ndvi
 
+#function create ndvi and craete the mask using it and build the tiff with cutting trees
 def NDVI(zipFilePath):
-    name = "NDVI.tiff"
 
     z = zipfile.ZipFile(zipFilePath)  # Flexibility with regard to zipfile
     for c in z.namelist():
 
-        # print(c)
-        if c == 'B04_8.tiff':
+        print(c)
+        if 'B04' in c:
             red = rasterio.open('zip+file:./' + zipFilePath + '/' + c, "r")
-        else:
+        elif 'B08' in c:
             nir = rasterio.open('zip+file:./' + zipFilePath + '/' + c, "r")
+        else:
+            tr = rasterio.open('zip+file:./' + zipFilePath + '/' + c, "r")
+
+
 
     # Reading red band.
-    red_array = red.read()
+    redArray = red.read()
+    # Copy metadata
     metadata = red.meta.copy()
 
     # Reading NIR band
-    nir_array = nir.read()
+    nirArray = nir.read()
+
+    # Reading true_image band
+    true_array = tr.read()
+
+    red.close()
+    nir.close()
+    tr.close()
+
 
     # Calling the NDVI function.
-    ndvi_array = getNDVI(red_array, nir_array)
+    ndviArray = getNDVI(redArray, nirArray)
 
-    # Updating metadata
-    metadata.update({"driver": "GTiff", "dtype": rasterio.float32})
+
+    #create mask from ndvi
+    ndviArray[ndviArray > .6] = 1
+    ndviArray[ndviArray < .6] = 0
+
+    print(ndviArray)
+    #
+    # #multiply mask and true color image for take polygons with vegetarians
+    # trueMultiplyNdvi = true_array * ndviArray
+
+    #Create path for mask tiff
     path = os.path.join('./data/result/', str(uuid.uuid4()) + ".tiff")
-
+    print('metadata: ',metadata)
     # Writing the NDVI raster with the same properties as the original data
+    metadata.update({"driver": "GTiff", "dtype": rasterio.float32})
     with rasterio.open(path, "w", **metadata) as dst:
-        if ndvi_array.ndim == 2:
-            dst.write(ndvi_array, 1)
-        else:
-            dst.write(ndvi_array)
+        dst.write(ndviArray)
+
+    #return path to file with cutting trees
+    return path
+
+def getTreeMask(tile_filename):
+    tr = rasterio.open(tile_filename, "r")
+    metadata = tr.meta.copy()
+    metadata['photometric'] = "RGB"
+
+    # use the pre-trained model to segment the image into tree/non-tree-pixels
+    y_pred = np.array([dtr.Classifier().predict_img(tile_filename)])
+
+    path = os.path.join('./data/treeMasks/', str(uuid.uuid4()) + ".tiff")
+    metadata.update({"driver": "GTiff", "dtype": rasterio.float32, "count": 1})
+    with rasterio.open(path, "w", **metadata) as dst:
+        dst.write(y_pred)
+        dst.close()
 
     return path

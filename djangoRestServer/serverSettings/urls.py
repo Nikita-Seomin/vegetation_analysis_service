@@ -16,10 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from server.views import ZipFileAPIView
-
+from server.views.views import getNDVIImageAPIView, getCuttingTreeImageAPIView, getHSIIndexAPIView, getGIGreenIndexAPIView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/zipFile/', ZipFileAPIView.as_view())
+    path('api/v1/getNDVI/', getNDVIImageAPIView.as_view()),
+    path('api/v1/getHSI/', getHSIIndexAPIView.as_view()),
+    path('api/v1/getGIGreen/', getGIGreenIndexAPIView.as_view()),
+    path('api/v1/getCuttingTreeImage/', getCuttingTreeImageAPIView.as_view())
+
+
 ]

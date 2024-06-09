@@ -1,6 +1,4 @@
 from django.db import models
-from django.conf import settings
-from django.conf.urls.static import static
 import uuid
 
 def user_directory_path(instance, filename):

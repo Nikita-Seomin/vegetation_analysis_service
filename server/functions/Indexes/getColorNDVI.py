@@ -16,17 +16,12 @@
 
 import os
 import optparse
-import numpy as np
 import rasterio
 import zipfile
 import uuid
 
+from server.functions.Indexes.getNDVI import getNDVIArray
 
-import matplotlib.pyplot as plt
-import rasterio as rio
-from rasterio import plot
-import detectree as dtr
-from PIL import Image
 
 class OptionParser(optparse.OptionParser):
     "A class to parse the arguments."
@@ -40,27 +35,10 @@ class OptionParser(optparse.OptionParser):
             self.error("{} option is required.".format(option))
 
 
-def getNDVI(r: np.array, n: np.array) -> np.array:
-    """The NDVI function.
 
-    Args:
-        r (np.array): Red band array
-        n (np.array): NIR band array
-
-    Returns:
-        np.array: NDVI array
-    """
-    np.seterr(divide='ignore', invalid='ignore')  # Ignore the divided by zero or Nan appears
-    # BE CAREFULL! Without this convertion, doesn't work correctly !
-    n = n.astype(rasterio.float32)
-    r = r.astype(rasterio.float32)
-    ndvi = (n - r) / (n + r)  # The NDVI formula
-
-    return ndvi
 
 #function create ndvi and craete the mask using it and build the tiff with cutting trees
-def NDVI(zipFilePath):
-
+def getColorNDVI(zipFilePath):
     z = zipfile.ZipFile(zipFilePath)  # Flexibility with regard to zipfile
     for c in z.namelist():
 
@@ -107,8 +85,8 @@ def NDVI(zipFilePath):
 
 
     # Calling the NDVI function.
-    ndviArray = getNDVI(redArray, nirArray)
-    print(ndviArray[0][0])
+    ndviArray = getNDVIArray(redArray, nirArray)
+    print(true_array.shape)
     for str_image in range(true_array.shape[1]):
         for pixel in range(true_array.shape[2]):
             if ndviArray[0][str_image][pixel] <= -0.5:
@@ -204,6 +182,7 @@ def NDVI(zipFilePath):
                 true_array[0][str_image][pixel] = 0
                 true_array[1][str_image][pixel] = 0
                 true_array[2][str_image][pixel] = 0
+
 
     # true_array[0] = 255.0 * rescale(true_array[0])
     # true_array[1] = 255.0 * rescale(true_array[1])

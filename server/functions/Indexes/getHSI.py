@@ -2,13 +2,16 @@ import rasterio
 import zipfile
 import uuid
 import os
+import numpy as np
 
-from server.functions.Indexes.getNDVI import getNDVI
+from server.functions.Indexes.getColorNDVI import getNDVIArray
 
 
-def GIGreen(zipFilePath):
+def HSI(zipFilePath):
+
     z = zipfile.ZipFile(zipFilePath)  # Flexibility with regard to zipfile
     for c in z.namelist():
+        # print(c)
         if 'B03' in c:
             green = rasterio.open('zip+file:./' + zipFilePath + '/' + c, "r")
         elif 'B04' in c:
@@ -23,16 +26,18 @@ def GIGreen(zipFilePath):
     # Reading green band.
     greenArray = green.read()
 
+
     # Reading red band.
     redArray = red.read()
-    # # print(redArray)
-    #
+    # print(redArray)
+
     # Reading blue band.
     blueArray = blue.read()
-
+    # print(blueArray)
 
     # Copy metadata
-    metadata = tr.meta.copy()
+    metadata = nir.meta.copy()
+
 
     # Reading nir band
     nirArray = nir.read()
@@ -41,36 +46,26 @@ def GIGreen(zipFilePath):
     # Reading tr band
     trArray = tr.read()
 
-    metadata['photometric'] = "RGB"
+    ndviArray = getNDVIArray(redArray, nirArray)
 
-    ndviArray = getNDVI(redArray, nirArray)
-
-    ndviArray[ndviArray >= .5] = 1
+    ndviArray[ndviArray >= .1] = 1
     ndviArray[ndviArray < .1] = 0
 
-    GIGreenImageArray = (greenArray - blueArray) * ndviArray
+    hsiImageArray = (nirArray / np.abs(greenArray - blueArray)) * ndviArray
+    print(hsiImageArray)
 
-    print(GIGreenImageArray)
+    hsiImageArray[hsiImageArray >= 15] = 100
+    hsiImageArray[hsiImageArray < 15] = 0
 
-    # GIGreenImageArray[GIGreenImageArray >= 5] = 100
-    # GIGreenImageArray[GIGreenImageArray < 5] = 0
+    path = os.path.join('./data/hsi/', str(uuid.uuid4()) + ".tiff")
 
 
 
-    for str_image in range(trArray.shape[1]):
-        for pixel in range(trArray.shape[2]):
-            if .04 < GIGreenImageArray[0][str_image][pixel] < .1:
-                trArray[0][str_image][pixel] = 255
-                trArray[1][str_image][pixel] = 0
-                trArray[2][str_image][pixel] = 0
-
-    path = os.path.join('./data/GIGreen/', str(uuid.uuid4()) + ".tiff")
-
-    metadata.update({"driver": "GTiff", "dtype": rasterio.float32})
+    metadata.update({"driver": "GTiff", "dtype": rasterio.uint8, "count": 1})
     with rasterio.open(path, "w", **metadata) as dst:
         # dst.colorinterp = [
         #     ColorInterp.red, ColorInterp.green, ColorInterp.blue]
-        dst.write(trArray)
+        dst.write(hsiImageArray)
 
     # return path to file with cutting trees
     return path
